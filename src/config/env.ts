@@ -21,4 +21,9 @@ export const env = {
     webhookSecret: process.env.SQUAD_WEBHOOK_SECRET ?? "",
     environment: process.env.SQUAD_ENVIRONMENT ?? "sandbox",
   },
+  resend: {
+    apiKey: process.env.RESEND_API_KEY ?? "",
+    fromEmail: process.env.RESEND_FROM_EMAIL ?? "admin@bendelinsurancefootball.com",
+    fromName: process.env.RESEND_FROM_NAME ?? "Bendel Insurance FC",
+  },
 };

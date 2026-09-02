@@ -3,6 +3,7 @@ export const userRoleEnum = pgEnum("user_role", ["admin", "member"]);
 export const orderStatusEnum = pgEnum("order_status", ["pending", "paid", "processing", "completed", "cancelled"]);
 export const orderTypeEnum = pgEnum("order_type", ["ticket", "merch"]);
 export const deliveryMethodEnum = pgEnum("delivery_method", ["pickup", "delivery"]);
+export const tokenTypeEnum = pgEnum("token_type", ["email_verification", "password_reset"]);
 export const users = pgTable("users", {
     id: uuid("id").primaryKey().defaultRandom(),
     email: text("email").notNull().unique(),
@@ -12,8 +13,19 @@ export const users = pgTable("users", {
     passwordHash: text("password_hash").notNull(),
     role: userRoleEnum("role").default("member").notNull(),
     isActive: boolean("is_active").default(true).notNull(),
+    isEmailVerified: boolean("is_email_verified").default(false).notNull(),
+    emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+export const authTokens = pgTable("auth_tokens", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    type: tokenTypeEnum("type").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 export const profiles = pgTable("profiles", {
     id: uuid("id").primaryKey().defaultRandom(),

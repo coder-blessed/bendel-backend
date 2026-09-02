@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { orders, users } from "../db/schema.js";
+import { orders, tickets, users } from "../db/schema.js";
+import { sendMatchTicketEmail, sendOrderReceiptEmail } from "./email.service.js";
 
 export async function createOrder(input: {
   userId?: string | null;
@@ -41,6 +42,47 @@ export async function createOrder(input: {
     })
     .returning();
 
+  // Send relevant email via Resend
+  if (input.type === "ticket") {
+    const ticketCode = `TKT-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    // Create ticket record in database
+    await db.insert(tickets).values({
+      orderId: order.id,
+      ticketCode,
+      matchName: input.itemName,
+      venue: "Samuel Ogbemudia Stadium, Benin City",
+      sentAt: new Date(),
+    });
+
+    // Send match ticket confirmation email to customer
+    await sendMatchTicketEmail({
+      to: input.customerEmail,
+      orderId: order.id,
+      customerName: input.customerName,
+      matchName: input.itemName,
+      ticketCode,
+      seatTier: input.itemCategory,
+      amount: input.amount,
+      venue: "Samuel Ogbemudia Stadium, Benin City",
+    });
+  } else if (input.type === "merch") {
+    // Send merchandise order receipt email to customer
+    await sendOrderReceiptEmail({
+      to: input.customerEmail,
+      orderId: order.id,
+      customerName: input.customerName,
+      itemName: input.itemName,
+      itemCategory: input.itemCategory,
+      deliveryMethod: input.deliveryMethod,
+      address: input.address,
+      amount: input.amount,
+      deliveryFee: input.deliveryFee ?? 0,
+      totalAmount: Number(input.amount) + Number(input.deliveryFee ?? 0),
+      paymentReference: input.paymentReference,
+    });
+  }
+
   return order;
 }
 
@@ -57,7 +99,10 @@ export async function getOrderById(id: string) {
   return matches[0] ?? null;
 }
 
-export async function updateOrderStatus(id: string, status: "pending" | "paid" | "processing" | "completed" | "cancelled") {
+export async function updateOrderStatus(
+  id: string,
+  status: "pending" | "paid" | "processing" | "completed" | "cancelled",
+) {
   const [order] = await db
     .update(orders)
     .set({ status, updatedAt: new Date() })
