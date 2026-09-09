@@ -7,6 +7,9 @@ export async function sendEmailViaResend({ to, subject, html, text }) {
     if (!env.resend.apiKey) {
         console.warn(`[EmailService:DEV_MODE] RESEND_API_KEY is not set. Email not dispatched via network.\n` +
             `From: ${from}\nTo: ${to}\nSubject: ${subject}\n`);
+        if (env.nodeEnv === "production") {
+            return { success: false, error: "Email delivery is not configured." };
+        }
         return { success: true, mocked: true, messageId: "mock-" + Date.now() };
     }
     try {

@@ -41,10 +41,13 @@ export async function registerUser(data) {
         expiresAt,
     });
     // Send verification email via Resend
-    await sendVerificationEmail({
+    const emailResult = await sendVerificationEmail({
         to: newUser.email,
         token,
     });
+    if (!emailResult.success) {
+        throw new Error(emailResult.error ?? "Unable to send verification email.");
+    }
     const authToken = signToken({
         userId: newUser.id,
         email: newUser.email,
@@ -157,11 +160,14 @@ export async function resendVerificationEmail(email) {
         type: "email_verification",
         expiresAt,
     });
-    await sendVerificationEmail({
+    const emailResult = await sendVerificationEmail({
         to: user.email,
         token,
         firstName: user.firstName,
     });
+    if (!emailResult.success) {
+        throw new Error(emailResult.error ?? "Unable to send verification email.");
+    }
     return { success: true, message: "Verification link sent to your email." };
 }
 /**
@@ -183,11 +189,14 @@ export async function requestPasswordReset(email) {
         type: "password_reset",
         expiresAt,
     });
-    await sendPasswordResetEmail({
+    const emailResult = await sendPasswordResetEmail({
         to: user.email,
         token,
         firstName: user.firstName,
     });
+    if (!emailResult.success) {
+        throw new Error(emailResult.error ?? "Unable to send password reset email.");
+    }
     return { success: true, message: "Password reset link sent to your email." };
 }
 /**
