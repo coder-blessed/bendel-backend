@@ -28,6 +28,11 @@ export const env = {
     webhookSecret: process.env.SQUAD_WEBHOOK_SECRET ?? "",
     environment: process.env.SQUAD_ENVIRONMENT ?? "sandbox",
   },
+  liveScore: {
+    baseUrl: process.env.LIVESCORE_API_BASE_URL ?? "",
+    apiKey: process.env.LIVESCORE_API_KEY ?? "",
+    apiToken: process.env.LIVESCORE_API_TOKEN ?? "",
+  },
   resend: {
     apiKey: process.env.RESEND_API_KEY ?? "",
     fromEmail: process.env.RESEND_FROM_EMAIL ?? "admin@bendelinsurancefootball.com",
