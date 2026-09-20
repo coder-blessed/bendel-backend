@@ -10,6 +10,58 @@ import {
 import { comparePassword, hashPassword, signToken } from "../utils/auth.js";
 import { sendMatchTicketEmail, sendOrderReceiptEmail } from "./email.service.js";
 
+export async function ensureDefaultAdminUser() {
+  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD?.trim();
+
+  if (!email || !password) {
+    return;
+  }
+
+  const normalizedEmail = email.toLowerCase().trim();
+  const existing = await db.query.users.findFirst({
+    where: eq(users.email, normalizedEmail),
+  });
+
+  if (existing) {
+    const passwordMatches = await comparePassword(password, existing.passwordHash);
+    const shouldPromoteToAdmin = existing.role !== "admin" || !existing.isActive || !existing.isEmailVerified;
+
+    if (passwordMatches && !shouldPromoteToAdmin) {
+      return;
+    }
+
+    const updatedPassword = passwordMatches ? existing.passwordHash : await hashPassword(password);
+
+    await db
+      .update(users)
+      .set({
+        passwordHash: updatedPassword,
+        role: "admin",
+        isActive: true,
+        isEmailVerified: true,
+        emailVerifiedAt: existing.emailVerifiedAt ?? new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, existing.id));
+
+    return;
+  }
+
+  const passwordHash = await hashPassword(password);
+
+  await db.insert(users).values({
+    email: normalizedEmail,
+    passwordHash,
+    firstName: "Admin",
+    lastName: "User",
+    role: "admin",
+    isActive: true,
+    isEmailVerified: true,
+    emailVerifiedAt: new Date(),
+  });
+}
+
 /**
  * Authenticates an admin user and returns a JWT token
  */
