@@ -25,9 +25,26 @@ function requireSquadConfig() {
     throw new Error("SQUAD_API_BASE_URL is not configured.");
   }
 
-  if (!env.squad.secretKey) {
-    throw new Error("SQUAD_SECRET_KEY is not configured.");
+  if (!env.squad.apiKey && !env.squad.secretKey) {
+    throw new Error("No Squad API credentials are configured.");
   }
+}
+
+function getSquadAuthHeaders() {
+  const apiKey = env.squad.apiKey?.trim();
+  const secretKey = env.squad.secretKey?.trim();
+
+  const authValue = apiKey || secretKey;
+
+  if (!authValue) {
+    throw new Error("SQUAD API credentials are missing.");
+  }
+
+  return {
+    Authorization: `Bearer ${authValue}`,
+    "X-API-Key": apiKey || secretKey || "",
+    "Content-Type": "application/json",
+  };
 }
 
 function generateTransactionReference(orderId: string) {
@@ -68,21 +85,20 @@ export async function initializeSquadPayment(orderId: string) {
   // Squad expects the amount in kobo for NGN.
   const amountInKobo = Math.round(totalAmount * 100);
 
+  const frontendCallbackUrl = `${env.frontendUrl.replace(/\/$/, "")}/payment/success`;
+
   const response = await fetch(
     `${env.squad.baseUrl.replace(/\/$/, "")}/transaction/initiate`,
     {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.squad.secretKey}`,
-        "Content-Type": "application/json",
-      },
+      headers: getSquadAuthHeaders(),
       body: JSON.stringify({
         amount: amountInKobo,
         email: order.customerEmail,
         currency: "NGN",
         initiate_type: "inline",
         transaction_ref: transactionReference,
-        callback_url: `${env.frontendUrl}/payment/success`,
+        callback_url: frontendCallbackUrl,
       }),
     },
   );
