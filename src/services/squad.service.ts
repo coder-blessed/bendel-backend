@@ -67,9 +67,21 @@ export async function initializeSquadPayment(orderId: string) {
   }
 
   if (order.paymentReference) {
-    throw new Error(
-      "A Squad payment has already been initialized for this order.",
-    );
+    const isLegacyPlaceholder = order.paymentReference.startsWith("bendel-");
+
+    if (isLegacyPlaceholder) {
+      await db
+        .update(orders)
+        .set({
+          paymentReference: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(orders.id, order.id));
+    } else {
+      throw new Error(
+        "A Squad payment has already been initialized for this order.",
+      );
+    }
   }
 
   const transactionReference =
