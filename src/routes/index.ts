@@ -32,6 +32,11 @@ import {
 } from "../controllers/order.controller.js";
 import { getProfileController, saveProfileController } from "../controllers/profile.controller.js";
 import { requireAdmin, requireAuth } from "../middleware/auth.js";
+import {
+  initializeSquadPaymentController,
+  squadWebhookController,
+  verifySquadPaymentController,
+} from "../controllers/payment.controller.js";
 
 const router = Router();
 
@@ -54,6 +59,22 @@ router.post("/auth/reset-password", resetPasswordController);
 router.post("/admin/login", adminLoginController);
 router.post("/auth/admin-login", adminLoginController);
 
+
+router.post(
+  "/payments/squad/initialize",
+  requireAuth,
+  initializeSquadPaymentController,
+);
+
+router.post(
+  "/payments/squad/webhook",
+  squadWebhookController,
+);
+
+router.get(
+  "/payments/squad/verify/:reference",
+  verifySquadPaymentController,
+);
 // ==========================================
 // User Profile Routes
 // ==========================================
