@@ -24,61 +24,35 @@ export async function createOrder(input) {
         metadata: input.metadata ?? null,
     })
         .returning();
-    // Send relevant email via Resend
-    if (input.type === "ticket") {
-        const ticketCode = `TKT-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
-        // Create ticket record in database
-        await db.insert(tickets).values({
-            orderId: order.id,
-            ticketCode,
-            matchName: input.itemName,
-            venue: "Samuel Ogbemudia Stadium, Benin City",
-            sentAt: new Date(),
-        });
-        // Send match ticket confirmation email to customer
-        await sendMatchTicketEmail({
-            to: input.customerEmail,
-            orderId: order.id,
-            customerName: input.customerName,
-            matchName: input.itemName,
-            ticketCode,
-            seatTier: input.itemCategory,
-            amount: input.amount,
-            venue: "Samuel Ogbemudia Stadium, Benin City",
-        });
-    }
-    else if (input.type === "merch") {
-        // Send merchandise order receipt email to customer
-        await sendOrderReceiptEmail({
-            to: input.customerEmail,
-            orderId: order.id,
-            customerName: input.customerName,
-            itemName: input.itemName,
-            itemCategory: input.itemCategory,
-            deliveryMethod: input.deliveryMethod,
-            address: input.address,
-            amount: input.amount,
-            deliveryFee: input.deliveryFee ?? 0,
-            totalAmount: Number(input.amount) + Number(input.deliveryFee ?? 0),
-            paymentReference: input.paymentReference,
-        });
-    }
     return order;
 }
 export async function listOrders() {
-    return db.select().from(orders).orderBy(desc(orders.createdAt));
+    return db
+        .select()
+        .from(orders)
+        .orderBy(desc(orders.createdAt));
 }
 export async function getOrdersByUser(userId) {
-    return db.select().from(orders).where(eq(orders.userId, userId)).orderBy(desc(orders.createdAt));
+    return db
+        .select()
+        .from(orders)
+        .where(eq(orders.userId, userId))
+        .orderBy(desc(orders.createdAt));
 }
 export async function getOrderById(id) {
-    const matches = await db.select().from(orders).where(eq(orders.id, id));
+    const matches = await db
+        .select()
+        .from(orders)
+        .where(eq(orders.id, id));
     return matches[0] ?? null;
 }
 export async function updateOrderStatus(id, status) {
     const [order] = await db
         .update(orders)
-        .set({ status, updatedAt: new Date() })
+        .set({
+        status,
+        updatedAt: new Date(),
+    })
         .where(eq(orders.id, id))
         .returning();
     return order;
@@ -96,4 +70,67 @@ export async function getUsersWithOrders() {
     })
         .from(users)
         .orderBy(desc(users.createdAt));
+}
+export async function completePaidOrder(orderId, squadTransactionId) {
+    const order = await getOrderById(orderId);
+    if (!order) {
+        throw new Error("Order not found.");
+    }
+    // Idempotency:
+    // If the webhook arrives more than once, do not create
+    // another ticket or send another confirmation email.
+    if (order.status === "paid" || order.status === "processing" || order.status === "completed") {
+        return order;
+    }
+    const [updatedOrder] = await db
+        .update(orders)
+        .set({
+        status: "paid",
+        squadTransactionId: squadTransactionId ?? order.squadTransactionId ?? null,
+        updatedAt: new Date(),
+    })
+        .where(eq(orders.id, order.id))
+        .returning();
+    if (!updatedOrder) {
+        throw new Error("Unable to update paid order.");
+    }
+    if (updatedOrder.type === "ticket") {
+        const ticketCode = `TKT-${Date.now()
+            .toString()
+            .slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
+        await db.insert(tickets).values({
+            orderId: updatedOrder.id,
+            ticketCode,
+            matchName: updatedOrder.itemName,
+            venue: "Samuel Ogbemudia Stadium, Benin City",
+            sentAt: new Date(),
+        });
+        await sendMatchTicketEmail({
+            to: updatedOrder.customerEmail,
+            orderId: updatedOrder.id,
+            customerName: updatedOrder.customerName,
+            matchName: updatedOrder.itemName,
+            ticketCode,
+            seatTier: updatedOrder.itemCategory,
+            amount: Number(updatedOrder.amount),
+            venue: "Samuel Ogbemudia Stadium, Benin City",
+        });
+    }
+    else if (updatedOrder.type === "merch") {
+        await sendOrderReceiptEmail({
+            to: updatedOrder.customerEmail,
+            orderId: updatedOrder.id,
+            customerName: updatedOrder.customerName,
+            itemName: updatedOrder.itemName,
+            itemCategory: updatedOrder.itemCategory,
+            deliveryMethod: updatedOrder.deliveryMethod,
+            address: updatedOrder.address ?? undefined,
+            amount: Number(updatedOrder.amount),
+            deliveryFee: Number(updatedOrder.deliveryFee),
+            totalAmount: Number(updatedOrder.amount) +
+                Number(updatedOrder.deliveryFee),
+            paymentReference: updatedOrder.paymentReference ?? undefined,
+        });
+    }
+    return updatedOrder;
 }
