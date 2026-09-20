@@ -11,7 +11,7 @@ import { comparePassword, hashPassword, signToken } from "../utils/auth.js";
 import { sendMatchTicketEmail, sendOrderReceiptEmail } from "./email.service.js";
 
 export async function ensureDefaultAdminUser() {
-  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const email = (process.env.ADMIN_EMAIL ?? process.env.ADMIN_USERNAME)?.trim().toLowerCase();
   const password = process.env.ADMIN_PASSWORD?.trim();
 
   if (!email || !password) {
