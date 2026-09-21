@@ -52,9 +52,15 @@ export async function squadWebhookController(
       });
     }
 
-    const rawBody = JSON.stringify(req.body);
+    const rawBody = Buffer.isBuffer(req.body)
+      ? req.body
+      : Buffer.from(JSON.stringify(req.body ?? {}), "utf8");
 
-    const valid = validateSquadWebhook(rawBody, signature);
+    const payload = rawBody.length > 0
+      ? JSON.parse(rawBody.toString("utf8"))
+      : {};
+
+    const valid = validateSquadWebhook(rawBody.toString("utf8"), signature);
 
     if (!valid) {
       return res.status(401).json({
@@ -63,11 +69,12 @@ export async function squadWebhookController(
       });
     }
 
-    await verifySquadPayment(req.body);
+    const result = await verifySquadPayment(payload);
 
     return res.status(200).json({
       success: true,
       message: "Webhook received successfully.",
+      data: result,
     });
   } catch (error) {
     console.error("Squad webhook error:", error);

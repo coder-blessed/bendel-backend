@@ -9,6 +9,7 @@ const app = express();
 const port = env.port;
 
 app.use(cors({ origin: env.frontendUrl, credentials: true }));
+app.use("/api/payments/squad/webhook", express.raw({ type: "application/json", limit: "10mb" }));
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));

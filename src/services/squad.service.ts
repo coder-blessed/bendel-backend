@@ -321,5 +321,46 @@ export async function verifySquadPayment(
     );
   }
 
-  return payload;
+  const transactionStatus = String(
+    payload?.status ??
+      payload?.transaction_status ??
+      payload?.data?.status ??
+      payload?.data?.transaction_status ??
+      "",
+  ).toLowerCase();
+
+  const successfulStatuses = new Set([
+    "success",
+    "successful",
+    "paid",
+    "completed",
+  ]);
+
+  if (successfulStatuses.has(transactionStatus)) {
+    const transactionId =
+      payload?.id ??
+      payload?.transaction_id ??
+      payload?.data?.id ??
+      payload?.data?.transaction_id ??
+      null;
+
+    const updatedOrder = await completePaidOrder(
+      order.id,
+      transactionId ? String(transactionId) : null,
+    );
+
+    return {
+      verified: true,
+      order: updatedOrder,
+      status: transactionStatus,
+      raw: payload,
+    };
+  }
+
+  return {
+    verified: false,
+    order,
+    status: transactionStatus,
+    raw: payload,
+  };
 }
