@@ -1,6 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { orders, tickets, users } from "../db/schema.js";
+import { getNextHomeFixture, getFixtureDisplayName } from "./fixture.service.js";
 import { sendMatchTicketEmail, sendOrderReceiptEmail } from "./email.service.js";
 export async function createOrder(input) {
     const [order] = await db
@@ -98,22 +99,28 @@ export async function completePaidOrder(orderId, squadTransactionId) {
         const ticketCode = `TKT-${Date.now()
             .toString()
             .slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
+        const upcomingFixture = await getNextHomeFixture();
+        const fixtureTitle = getFixtureDisplayName(upcomingFixture) || updatedOrder.itemName;
+        const fixtureVenue = upcomingFixture?.venue || "Samuel Ogbemudia Stadium, Benin City";
+        const fixtureDate = upcomingFixture?.date || new Date().toISOString();
         await db.insert(tickets).values({
             orderId: updatedOrder.id,
             ticketCode,
-            matchName: updatedOrder.itemName,
-            venue: "Samuel Ogbemudia Stadium, Benin City",
+            matchName: fixtureTitle,
+            venue: fixtureVenue,
+            eventDate: new Date(fixtureDate),
             sentAt: new Date(),
         });
         await sendMatchTicketEmail({
             to: updatedOrder.customerEmail,
             orderId: updatedOrder.id,
             customerName: updatedOrder.customerName,
-            matchName: updatedOrder.itemName,
+            matchName: fixtureTitle,
             ticketCode,
             seatTier: updatedOrder.itemCategory,
             amount: Number(updatedOrder.amount),
-            venue: "Samuel Ogbemudia Stadium, Benin City",
+            venue: fixtureVenue,
+            eventDate: fixtureDate,
         });
     }
     else if (updatedOrder.type === "merch") {

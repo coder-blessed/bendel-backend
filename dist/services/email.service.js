@@ -220,8 +220,8 @@ export async function sendOrderReceiptEmail(params) {
     const formattedDelivery = delivery > 0 ? `₦${delivery.toLocaleString()}` : "Free (Pickup)";
     const formattedTotal = `₦${grandTotal.toLocaleString()}`;
     const fulfillmentDetails = params.deliveryMethod === "delivery"
-        ? `<p style="margin: 4px 0; color: #ffffff;"><strong>Home Delivery:</strong> ${params.address || "Address specified on file"}</p>`
-        : `<p style="margin: 4px 0; color: #ffffff;"><strong>Club Secretariat Pickup:</strong> Collect at the Official Club Secretariat, Samuel Ogbemudia Stadium, Benin City (Mon–Fri, 9am–5pm).</p>`;
+        ? `<p style="margin: 4px 0; color: #ffffff;"><strong>Home Delivery:</strong> ${params.address || "Address specified on file"}</p><p style="margin: 4px 0; color: #ffffff;">Rider delivery fee: ${formattedDelivery}</p>`
+        : `<p style="margin: 4px 0; color: #ffffff;"><strong>Pickup:</strong> Collect your order at Ogbemudia Stadium, Benin City.</p>`;
     const content = `
     <div style="text-align: center; margin-bottom: 20px;">
       <span class="badge">OFFICIAL STORE RECEIPT</span>
