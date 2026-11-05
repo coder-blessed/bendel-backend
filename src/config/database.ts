@@ -16,3 +16,30 @@ export function getDatabaseConnectionOptions(
         : false,
   };
 }
+
+export function getDrizzleDatabaseCredentials(
+  databaseUrl: string,
+  useSsl: boolean,
+) {
+  const url = new URL(databaseUrl);
+  const sslMode = url.searchParams.get("sslmode");
+  const ssl =
+    useSsl
+      ? "require"
+      : sslMode === "disable"
+        ? false
+        : sslMode === "verify-full"
+          ? "verify-full"
+          : sslMode !== null
+            ? "require"
+            : false;
+
+  return {
+    host: url.hostname,
+    port: Number(url.port || 5432),
+    user: decodeURIComponent(url.username),
+    password: decodeURIComponent(url.password),
+    database: decodeURIComponent(url.pathname.slice(1)),
+    ssl,
+  };
+}
