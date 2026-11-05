@@ -26,6 +26,18 @@ npm install
 npm run dev
 ```
 
+## Render deployment
+
+Set `DATABASE_URL` to the Render Postgres connection URL. The backend removes the URL's `sslmode` parameter and configures TLS explicitly so `pg` does not replace the application's SSL settings while parsing the URL.
+
+Use the following Render commands:
+
+- **Build Command:** `npm install --include=dev && npm run build`
+- **Pre-Deploy Command:** `npm run db:migrate`
+- **Start Command:** `npm start`
+
+Render's pre-deploy command runs migrations before the new service version starts and is available on eligible paid services. If it is unavailable for your service, keep `npm run db:migrate` as the final step of the Build Command. If the database connection still fails, verify the database is available and use its internal URL when the database and backend are in the same Render region.
+
 ## API
 
 ### Health
